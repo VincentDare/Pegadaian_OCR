@@ -172,7 +172,8 @@ def hapus_semua_data():
         if os.path.exists(folder):
             for root, dirs, files in os.walk(folder):
                 for f in files:
-                    if f.endswith(".pkl"):  # model tetap aman
+                    # Skip file penting (model & gitkeep)
+                    if f.endswith(".pkl") or f == ".gitkeep":
                         skipped.append(f)
                         continue
                     try:
@@ -187,10 +188,13 @@ if st.session_state.last_upload_time:
     elapsed = time.time() - st.session_state.last_upload_time
     if elapsed > 1800:  # 30 menit
         deleted_count, skipped = hapus_semua_data()
-        st.success(f"✅ {deleted_count} file otomatis dihapus setelah 30 menit. "
-                   f"Model (.pkl) tetap aman ({len(skipped)} file).")
+        st.success(
+            f"✅ {deleted_count} file otomatis dihapus setelah 30 menit. "
+            f"File penting aman ({len(skipped)} file dilewati: {', '.join(skipped)})."
+        )
         st.session_state.last_upload_time = None
         st.rerun()
+
 
 # === Manual delete pakai tombol ===
 st.subheader("Hapus Semua Data")
