@@ -1,0 +1,29 @@
+# Core
+pandas==2.2.2
+numpy==1.26.4
+scikit-learn==1.5.2
+scipy==1.13.1
+
+# Visualization
+matplotlib==3.9.2
+seaborn==0.13.2
+
+# OCR
+easyocr==1.7.2
+torch==2.2.2
+torchvision==0.17.2
+torchaudio==2.2.2
+
+# Image processing
+opencv-python-headless==4.10.0.84
+pdf2image==1.17.0
+
+# Excel / File handling
+openpyxl==3.1.5
+joblib==1.4.2
+
+# Utils
+tqdm==4.66.5
+
+# Streamlit app
+streamlit==1.39.0

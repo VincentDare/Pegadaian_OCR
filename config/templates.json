@@ -1,0 +1,5 @@
+{
+  "jatuh_tempo": "Selamat siang Bpk/Ibu {NASABAH},\nPinjaman Anda dengan nomor {NO_SBG} akan jatuh tempo pada {TGL_JATUH_TEMPO}.\nJumlah pinjaman sebesar Rp {UANG_PINJAMAN}.\nMohon segera lakukan pembayaran sebelum jatuh tempo.",
+  "kredit_bermasalah": "Selamat siang Bpk/Ibu {NASABAH},\nPinjaman Anda dengan nomor {NO_KREDIT} memiliki pinjaman sebesar Rp {UANG_PINJAMAN}.\nMohon segera lakukan pembayaran atau konfirmasi ke Pegadaian terdekat.",
+  "jatuh tempo": "Halo {NASABAH},\n\nKami ingin mengingatkan bahwa tagihan pinjaman Anda dengan nomor {NO_SBG} akan jatuh tempo pada tanggal {TGL_JATUH_TEMPO}.  \nJumlah pinjaman yang harus dibayarkan adalah Rp {UANG_PINJAMAN}.  \n\nMohon pastikan pembayaran dilakukan tepat waktu untuk menghindari denda keterlambatan.  \nTerima kasih atas perhatian Anda.\n\nSalam,\nTim Pegadaian\n"
+}

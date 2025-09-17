@@ -1,0 +1,4 @@
+{
+  "jatuh_tempo": ["NO_SBG", "NASABAH", "TGL_JATUH_TEMPO", "UANG_PINJAMAN", "TELP_HP"],
+  "kredit_bermasalah": ["NO_KREDIT", "NASABAH", "UANG_PINJAMAN"]
+}
