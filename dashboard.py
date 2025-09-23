@@ -148,9 +148,14 @@ if st.session_state.save_notification:
 # ===== 3. Jalankan Semua Pipeline =====
 st.subheader("Jalankan Model OCR")
 if st.button("Jalankan OCR"):
-    with st.spinner("Sedang menjalankan pipeline untuk semua PDF..."):
-        pipeline.run_pipeline_all()
-    st.success("✅ Semua pipeline selesai dijalankan!")
+    progress_bar = st.progress(0, text="Menjalankan pipeline...")
+
+    pipeline.run_pipeline_all(
+        update_progress=lambda p, msg: progress_bar.progress(p, text=msg)
+    )
+
+    st.success("Semua pipeline selesai dijalankan!")
+
 
 # ===== 4. Hapus Semua Data =====
 if "show_delete_popup" not in st.session_state:
@@ -336,12 +341,16 @@ if os.path.exists(clustered_file):
     clustered_df = pd.read_csv(clustered_file)
 
     if "CLUSTER_LABEL" not in clustered_df.columns:
-        cluster_order = clustered_df.groupby("CLUSTER")["UANG_PINJAMAN"].mean().sort_values().index.tolist()
-        cluster_labels = {
-            cluster_order[0]: "Pinjaman Kecil",
-            cluster_order[1]: "Pinjaman Menengah",
-            cluster_order[2]: "Pinjaman Besar"
-        }
+        cluster_order = (
+            clustered_df.groupby("CLUSTER")["UANG_PINJAMAN"]
+            .mean()
+            .sort_values()
+            .index.tolist()
+        )
+
+        # Ganti jadi Segmen 1, Segmen 2, Segmen 3
+        labels = [f"Segmen {i+1}" for i in range(len(cluster_order))]
+        cluster_labels = {cluster_order[i]: labels[i] for i in range(len(cluster_order))}
         clustered_df["CLUSTER_LABEL"] = clustered_df["CLUSTER"].map(cluster_labels)
 
     if latest_summary:
@@ -373,4 +382,3 @@ if os.path.exists(clustered_file):
 
 else:
     st.info("⚠️ Belum ada hasil clustering yang tersedia.")
-

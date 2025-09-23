@@ -48,7 +48,7 @@ def predict_clustering(input_path, model_path, scaler_path, output_dir):
 if __name__ == "__main__":
   base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
   input_path = os.path.join(base_dir, "output", "clustering", "preprocessing", "preprocessed.csv")
-  scaler_path = os.path.join(base_dir, "output", "clustering", "preprocessing", "scaler.pkl")
+  scaler_path = os.path.join(base_dir, "output", "clustering", "model", "scaler.pkl")
   model_path = os.path.join(base_dir, "output", "clustering", "model", "kmeans_model.pkl")
   output_dir = os.path.join(base_dir, "output", "clustering", "model")
 

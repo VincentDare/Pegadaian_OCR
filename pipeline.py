@@ -135,13 +135,16 @@ def run_pipeline_per_pdf(pdf_path: str, doc_type: str):
     print(f"\n✅ Selesai memproses PDF: {pdf_path}\n")
 
 
-def run_pipeline_all():
+def run_pipeline_all(update_progress=None):
     folder_mapping = {
         "jatuh_tempo": "Dataset Daftar Kredit Jatuh Tempo",
         "kredit_bermasalah": "Dataset Daftar Kredit Bermasalah"
     }
 
-    # --- Step 1: OCR semua PDF dari semua folder ---
+    total_steps = 7  # Dataset merge → Preprocessing → EDA → Clustering → Eval → Visualisasi → Cleanup
+    current = 0
+
+    # --- Step 1: OCR semua PDF ---
     for doc_type, folder_name in folder_mapping.items():
         input_dir = os.path.join(DATASET_DIR, folder_name)
         pdf_files = [f for f in os.listdir(input_dir) if f.endswith(".pdf")]
@@ -151,12 +154,9 @@ def run_pipeline_all():
             continue
 
         print(f"\n===== Preprocessing semua PDF di folder: {input_dir} (type={doc_type}) =====")
-        all_images = []  # tampung semua gambar dari semua PDF
-
-        # Preprocessing semua PDF
+        all_images = []
         for pdf_file in pdf_files:
             pdf_path = os.path.join(input_dir, pdf_file)
-            print(f"\n🚀 Preprocessing untuk: {pdf_file}")
             try:
                 image_files = preprocessing_ocr.run_preprocessing(
                     pdf_path, doc_type, base_output_dir=BASE_DIR
@@ -165,9 +165,7 @@ def run_pipeline_all():
             except Exception as e:
                 print(f"[ERROR] Gagal preprocessing {pdf_file}: {e}")
 
-        # OCR sekali jalan per kategori dokumen
         if all_images:
-            print(f"\n📌 OCR sekali jalan untuk type={doc_type}")
             try:
                 ocr_extractor.run_ocr_with_progress(all_images, OUTPUT_DIR, doc_type)
                 postprocessing.run_postprocessing_wrapper(OUTPUT_DIR)
@@ -176,38 +174,42 @@ def run_pipeline_all():
             except Exception as e:
                 print(f"[ERROR] Gagal OCR/Parsing untuk {doc_type}: {e}")
 
-    # --- Step 2: Sekali proses untuk clustering ---
-    print("\n📌 Step: Dataset Merge")
-    dataset.run_dataset()
+    # --- Step 2: Pipeline clustering ---
+    steps = [
+        ("Dataset Merge", lambda: dataset.run_dataset()),
+        ("Preprocessing", lambda: preprocessing.run_preprocessing()),
+        ("EDA", lambda: eda.run_eda(
+            os.path.join(OUTPUT_DIR, "clustering", "preprocessing", "preprocessed.csv"),
+            os.path.join(OUTPUT_DIR, "clustering", "eda")
+        )),
+        ("Clustering", lambda: clustering_step(
+            os.path.join(OUTPUT_DIR, "clustering", "preprocessing", "preprocessed.csv"),
+            os.path.join(OUTPUT_DIR, "clustering", "model")
+        )),
+        ("Evaluation", lambda: evaluate.run_evaluation(
+            os.path.join(OUTPUT_DIR, "clustering", "model", "clustered_data.csv"),
+            os.path.join(OUTPUT_DIR, "clustering", "evaluation")
+        )),
+        ("Visualization & Summary", lambda: visualize.run_visualization(
+            os.path.join(OUTPUT_DIR, "clustering", "model", "clustered_data.csv"),
+            os.path.join(OUTPUT_DIR, "clustering", "visualization"),
+            os.path.join(OUTPUT_DIR, "clustering", "summary")
+        )),
+        ("Cleanup", lambda: schedule_cleanup(delay=1800)),
+    ]
 
-    print("\n📌 Step: Preprocessing")
-    preprocessing.run_preprocessing()
+    for i, (name, func) in enumerate(steps, 1):
+        print(f"\n📌 Step: {name}")
+        try:
+            func()
+        except Exception as e:
+            print(f"[ERROR] Gagal di step {name}: {e}")
 
-    preprocessed_path = os.path.join(OUTPUT_DIR, "clustering", "preprocessing", "preprocessed.csv")
-
-    print("\n📌 Step: EDA")
-    eda.run_eda(preprocessed_path, os.path.join(OUTPUT_DIR, "clustering", "eda"))
-
-    print("\n📌 Step: Clustering")
-    clustering_step(preprocessed_path, os.path.join(OUTPUT_DIR, "clustering", "model"))
-
-    print("\n📌 Step: Evaluation")
-    evaluate.run_evaluation(
-        os.path.join(OUTPUT_DIR, "clustering", "model", "clustered_data.csv"),
-        os.path.join(OUTPUT_DIR, "clustering", "evaluation")
-    )
-
-    print("\n📌 Step: Visualization & Summary")
-    visualize.run_visualization(
-        os.path.join(OUTPUT_DIR, "clustering", "model", "clustered_data.csv"),
-        os.path.join(OUTPUT_DIR, "clustering", "visualization"),
-        os.path.join(OUTPUT_DIR, "clustering", "summary")
-    )
-
-    # 🔥 Jalankan cleanup otomatis setelah 30 menit
-    schedule_cleanup(delay=1800)
+        if update_progress:
+            update_progress(int(i / total_steps * 100), f"{name} ✅")
 
     print("\n✅ Pipeline selesai untuk semua folder\n")
+
 
 
 if __name__ == "__main__":

@@ -4,9 +4,14 @@ from sklearn.preprocessing import StandardScaler
 import joblib
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DATASET_DIR = os.path.join(BASE_DIR, "output", "dataset_clustering")  
-OUTPUT_DIR = os.path.join(BASE_DIR, "output", "clustering", "preprocessing")
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+DATASET_DIR = os.path.join(BASE_DIR, "output", "dataset_clustering")
+
+# Folder output
+PREPROCESS_DIR = os.path.join(BASE_DIR, "output", "clustering", "preprocessing")
+MODEL_DIR = os.path.join(BASE_DIR, "output", "clustering", "model")
+
+os.makedirs(PREPROCESS_DIR, exist_ok=True)
+os.makedirs(MODEL_DIR, exist_ok=True)
 
 def run_preprocessing():
     dataset_path = os.path.join(DATASET_DIR, "dataset.csv")
@@ -45,11 +50,11 @@ def run_preprocessing():
     df["PINJAMAN_SCALED"] = scaler.fit_transform(df[["UANG_PINJAMAN"]])
 
     # Simpan hasil preprocessing
-    out_path = os.path.join(OUTPUT_DIR, "preprocessed.csv")
+    out_path = os.path.join(PREPROCESS_DIR, "preprocessed.csv")
     df.to_csv(out_path, index=False)
 
     # Simpan scaler
-    scaler_path = os.path.join(OUTPUT_DIR, "scaler.pkl")
+    scaler_path = os.path.join(MODEL_DIR, "scaler.pkl")
     joblib.dump(scaler, scaler_path)
 
     print(f"✅ Preprocessing selesai.")
