@@ -76,6 +76,28 @@ def clustering_step(input_path, model_dir):
         train_clustering.run_clustering(input_path, model_dir, n_clusters=3)
 
 
+# --- OCR Helper untuk pipeline ---
+def run_ocr_for_doc_type(doc_type: str):
+    """
+    Wrapper untuk menjalankan OCR extraction berdasarkan doc_type.
+    Menggunakan fungsi process_doc_type dari ocr_extractor.
+    """
+    print(f"[INFO] Memulai OCR extraction untuk {doc_type}...")
+    
+    # Inisialisasi reader
+    reader = ocr_extractor.get_reader()
+    
+    # Proses OCR
+    df, out_path = ocr_extractor.process_doc_type(reader, doc_type)
+    
+    if df is not None:
+        print(f"[INFO] OCR {doc_type} selesai: {len(df)} records extracted")
+        return df, out_path
+    else:
+        print(f"[WARN] OCR {doc_type} tidak menghasilkan data")
+        return None, None
+
+
 # --- Pipeline per PDF ---
 def run_pipeline_per_pdf(pdf_path: str, doc_type: str):
     print("\n==============================")
@@ -93,11 +115,11 @@ def run_pipeline_per_pdf(pdf_path: str, doc_type: str):
         print(f"[INFO] {len(image_files)} gambar berhasil dibuat untuk OCR")
     except Exception as e:
         print(f"[ERROR] Gagal preprocessing PDF: {e}")
-        image_files = []
+        return
 
     # Steps pipeline utama
     steps = [
-        ("OCR Extractor", lambda: ocr_extractor.run_ocr_with_progress(image_files, OUTPUT_DIR, doc_type)),
+        ("OCR Extractor", lambda: run_ocr_for_doc_type(doc_type)),
         ("Postprocessing", lambda: postprocessing.run_postprocessing_wrapper(OUTPUT_DIR)),
         ("Cleaning", lambda: cleaning_std.run_cleaning(OUTPUT_DIR)),
         ("Parsing", lambda: parsers.parse_document(doc_type)),
@@ -144,35 +166,46 @@ def run_pipeline_all(update_progress=None):
     total_steps = 7  # Dataset merge → Preprocessing → EDA → Clustering → Eval → Visualisasi → Cleanup
     current = 0
 
-    # --- Step 1: OCR semua PDF ---
+    # --- Step 1: Preprocessing & OCR semua PDF per doc_type ---
     for doc_type, folder_name in folder_mapping.items():
         input_dir = os.path.join(DATASET_DIR, folder_name)
+        
+        if not os.path.exists(input_dir):
+            print(f"[WARN] Folder tidak ditemukan: {input_dir}")
+            continue
+            
         pdf_files = [f for f in os.listdir(input_dir) if f.endswith(".pdf")]
 
         if not pdf_files:
             print(f"[INFO] Tidak ada PDF di folder {input_dir}")
             continue
 
-        print(f"\n===== Preprocessing semua PDF di folder: {input_dir} (type={doc_type}) =====")
-        all_images = []
+        print(f"\n===== Preprocessing & OCR untuk: {doc_type} =====")
+        
+        # Preprocessing semua PDF menjadi images
         for pdf_file in pdf_files:
             pdf_path = os.path.join(input_dir, pdf_file)
             try:
                 image_files = preprocessing_ocr.run_preprocessing(
                     pdf_path, doc_type, base_output_dir=BASE_DIR
                 )
-                all_images.extend(image_files)
+                print(f"[INFO] {len(image_files)} images dari {pdf_file}")
             except Exception as e:
                 print(f"[ERROR] Gagal preprocessing {pdf_file}: {e}")
 
-        if all_images:
-            try:
-                ocr_extractor.run_ocr_with_progress(all_images, OUTPUT_DIR, doc_type)
-                postprocessing.run_postprocessing_wrapper(OUTPUT_DIR)
-                cleaning_std.run_cleaning(OUTPUT_DIR)
-                parsers.parse_document(doc_type)
-            except Exception as e:
-                print(f"[ERROR] Gagal OCR/Parsing untuk {doc_type}: {e}")
+        # Jalankan OCR untuk semua images doc_type ini
+        try:
+            run_ocr_for_doc_type(doc_type)
+        except Exception as e:
+            print(f"[ERROR] Gagal OCR untuk {doc_type}: {e}")
+
+        # Jalankan postprocessing, cleaning, parsing untuk doc_type ini
+        try:
+            postprocessing.run_postprocessing_wrapper(OUTPUT_DIR)
+            cleaning_std.run_cleaning(OUTPUT_DIR)
+            parsers.parse_document(doc_type)
+        except Exception as e:
+            print(f"[ERROR] Gagal post-processing untuk {doc_type}: {e}")
 
     # --- Step 2: Pipeline clustering ---
     steps = [
@@ -187,11 +220,11 @@ def run_pipeline_all(update_progress=None):
             os.path.join(OUTPUT_DIR, "clustering", "model")
         )),
         ("Evaluation", lambda: evaluate.run_evaluation(
-            os.path.join(OUTPUT_DIR, "clustering", "model", "clustered_data.csv"),
+            os.path.join(OUTPUT_DIR, "clustering", "model", "predicted_clusters.csv"),
             os.path.join(OUTPUT_DIR, "clustering", "evaluation")
         )),
         ("Visualization & Summary", lambda: visualize.run_visualization(
-            os.path.join(OUTPUT_DIR, "clustering", "model", "clustered_data.csv"),
+            os.path.join(OUTPUT_DIR, "clustering", "model", "predicted_clusters.csv"),
             os.path.join(OUTPUT_DIR, "clustering", "visualization"),
             os.path.join(OUTPUT_DIR, "clustering", "summary")
         )),
@@ -209,7 +242,6 @@ def run_pipeline_all(update_progress=None):
             update_progress(int(i / total_steps * 100), f"{name} ✅")
 
     print("\n✅ Pipeline selesai untuk semua folder\n")
-
 
 
 if __name__ == "__main__":
