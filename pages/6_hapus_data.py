@@ -18,6 +18,6 @@ def hapus_semua_data():
                         pass
     return deleted_count
 
-if st.button("🗑️ Hapus Semua Data"):
+if st.button("Hapus Semua Data"):
     count = hapus_semua_data()
     st.success(f"{count} file berhasil dihapus. Model tetap aman.")
