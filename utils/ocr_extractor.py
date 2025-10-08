@@ -404,26 +404,6 @@ def process_doc_type(reader, doc_type: str):
             parse_text = re.sub(r"\s+", " ", parse_text)
             parse_text = re.sub(r"(?<=[A-Za-z])(?=\d)", " ", parse_text)
             parse_text = re.sub(r"(?<=\d)(?=[A-Za-z])", " ", parse_text)
-            # Fix OCR errors
-            parse_text = re.sub(r"\bBTANS\b", "STANS", parse_text)
-            parse_text = re.sub(r"\bBTEVEN\b", "STEVEN", parse_text)
-            parse_text = re.sub(r"ELIZABETHHOTMA", "ELIZABETH HOTMA", parse_text)
-            # Separate concatenated names
-            parse_text = re.sub(r"(AYU)(?=NAD)", r"\1 ", parse_text)
-            parse_text = re.sub(r"(ROOSYE)(?=REWAH)", r"\1 ", parse_text)
-            parse_text = re.sub(r"(YERFIN)(?=LAGANDESA)", r"\1 ", parse_text)
-            parse_text = re.sub(r"(JUNITA)(?=KELLY)", r"\1 ", parse_text)
-            parse_text = re.sub(r"(HERLY)(?=SANGGRA)", r"\1 ", parse_text)
-            parse_text = re.sub(r"(ROONA)(?=INRI)", r"\1 ", parse_text)
-            parse_text = re.sub(r"(INRI)(?=DEVI)", r"\1 ", parse_text)
-            parse_text = re.sub(r"(DEVI)(?=LASUT)", r"\1 ", parse_text)
-            parse_text = re.sub(r"(TEO)(?=WAILAN)", r"\1 ", parse_text)
-            parse_text = re.sub(r"(VYCENCY)(?=TACYA)", r"\1 ", parse_text)
-            parse_text = re.sub(r"(ROSMIA)(?=KUBA)", r"ROSMI ", parse_text)
-            # Fix OCR errors in numbers (letter 'o' as zero at end)
-            parse_text = re.sub(r"(\d+,\d+)\s*[oO]+\b", r"\1", parse_text)  # Fix "1,202,0oo" -> "1,202"
-            parse_text = re.sub(r"[^0-9A-Za-z\s\.,\-:\/]", " ", parse_text)
-            parse_text = re.sub(r"\s+", " ", parse_text).strip()
             
             # NEW STRATEGY: Split records individually dengan boundary yang lebih ketat
             # Find all No_SBG positions first
