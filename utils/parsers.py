@@ -91,10 +91,48 @@ def autosize_and_format_excel(path, table_name="DataTable"):
 
     wb.save(path)
 
+def normalize_column_names(df):
+    """Normalisasi nama kolom dari lowercase ke UPPERCASE untuk template"""
+    column_mapping = {}
+    for col in df.columns:
+        col_lower = col.lower()
+        # Mapping dari lowercase ke UPPERCASE (untuk template)
+        if col_lower == "no_sbg":
+            column_mapping[col] = "NO_SBG"
+        elif col_lower == "no_kredit":
+            column_mapping[col] = "NO_KREDIT"
+        elif col_lower == "nasabah":
+            column_mapping[col] = "NASABAH"
+        elif col_lower in ["telp_hp", "hp", "no_hp"]:
+            column_mapping[col] = "TELP_HP"
+        elif col_lower in ["tgl_jatuh_tempo", "tanggal_jatuh_tempo"]:
+            column_mapping[col] = "TGL_JATUH_TEMPO"
+        elif col_lower in ["tgl_kredit", "tanggal_kredit"]:
+            column_mapping[col] = "TGL_KREDIT"
+        elif col_lower == "uang_pinjaman":
+            column_mapping[col] = "UANG_PINJAMAN"
+        else:
+            column_mapping[col] = col.upper()
+    
+    return df.rename(columns=column_mapping)
+
 def generate_messages(df, doc_type):
     """Generate pesan WhatsApp sesuai template"""
     template = TEMPLATES.get(doc_type, "")
     messages = []
+
+    # Normalisasi nama kolom ke UPPERCASE untuk template
+    df = normalize_column_names(df)
+
+    # SORTING: Urutkan berdasarkan UANG_PINJAMAN dari terbesar ke terkecil
+    if "UANG_PINJAMAN" in df.columns:
+        # Convert ke numeric untuk sorting yang benar
+        df["UANG_PINJAMAN_NUMERIC"] = df["UANG_PINJAMAN"].apply(
+            lambda x: int(re.sub(r"[^\d]", "", str(x))) if pd.notna(x) and str(x).strip() else 0
+        )
+        df = df.sort_values("UANG_PINJAMAN_NUMERIC", ascending=False)
+        df = df.drop("UANG_PINJAMAN_NUMERIC", axis=1)
+        print(f"[INFO] Messages diurutkan berdasarkan Uang Pinjaman (terbesar → terkecil)")
 
     for _, r in df.iterrows():
         row = r.to_dict()
@@ -120,10 +158,23 @@ def parse_document(doc_type):
         return
 
     print(f"[INFO] Parsing {doc_type} dari {csv_file}")
-    df = pd.read_csv(csv_file, encoding="utf-8-sig")
+    df = pd.read_csv(csv_file, encoding="utf-8-sig", dtype=str)
 
+    # Normalisasi nama kolom ke UPPERCASE
+    df = normalize_column_names(df)
+
+    # Ambil field yang dibutuhkan sesuai config
     expected_fields = STRUCT_FIELDS.get(doc_type, [])
-    df_extracted = df[expected_fields].copy()
+    
+    # Filter hanya kolom yang ada di dataframe
+    available_fields = [f for f in expected_fields if f in df.columns]
+    if not available_fields:
+        print(f"[ERROR] Tidak ada kolom yang sesuai dengan struktur {doc_type}")
+        print(f"[INFO] Kolom yang tersedia: {list(df.columns)}")
+        print(f"[INFO] Kolom yang diharapkan: {expected_fields}")
+        return
+    
+    df_extracted = df[available_fields].copy()
 
     # normalisasi isi
     if "TELP_HP" in df_extracted.columns:
@@ -135,7 +186,7 @@ def parse_document(doc_type):
     out_csv = os.path.join(OUT_DIR, f"{doc_type}_extracted.csv")
     df_extracted.to_csv(out_csv, index=False, encoding="utf-8-sig")
 
-    # simpan messages ke XLSX
+    # simpan messages ke XLSX (SUDAH DISORT DI DALAM generate_messages)
     df_messages = generate_messages(df_extracted, doc_type)
     out_msg_xlsx = os.path.join(MSG_DIR, f"{doc_type}_messages.xlsx")
     df_messages.to_excel(out_msg_xlsx, index=False, engine="openpyxl")
